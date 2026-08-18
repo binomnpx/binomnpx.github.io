@@ -1,0 +1,158 @@
+---
+title: "Rising Temperatures in May"
+output:
+  html_document:
+    df_print: paged
+---
+
+### Background
+
+On the 17th of May, 2026 I woke up to some surprising heat and humidity. April had some pretty cold days so this sudden change was unexpected. I decided to look at the weather history and see if I could find patterns.
+
+### Data Acquisition
+
+I looked for datasets online that could tell me the previous 30 years of daily highs for temperature in Boston. My instinct was that May had not always been this hot, and I wanted to test this idea.
+
+After failing to find ready to use data, I came accross a website called wunderground.com that could at least tell me the high temperatures on any date I wanted. So I just read those and manually entered them in.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+
+temp <- c(80, 69, 66, 75, 77, 69, 68, 75, 91, 70, 80, 75, 69, 71, 50, 75, 64, 74, 52, 70, 66, 70, 53, 74, 61, 70, 73, 68, 61, 67, 57)
+
+
+(x <- tibble(temp = rev(temp), year = 1995:2025))
+```
+
+Not sure why I omitted 2026, but that's how she goes sometimes.
+
+### Graphing and Modeling
+
+Let's take a look at the raw data:
+
+```{r}
+x %>%
+  ggplot(aes(year, temp)) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1996, 2025, 4))
+```
+
+Clearly there is an upwards trend:
+
+```{r error=TRUE}
+x %>%
+  ggplot(aes(year, temp)) +
+  geom_line() +
+  geom_smooth(stat = "lm") +
+  scale_x_continuous(breaks = seq(1996, 2025, 4))
+```
+
+Hmm, that didn't work...
+
+```{r}
+?geom_smooth
+```
+
+Let's try this again:
+
+```{r}
+x %>%
+  ggplot(aes(year, temp)) +
+  geom_line() +
+  geom_smooth(method = "lm") +
+  scale_x_continuous(breaks = seq(1996, 2025, 4))
+```
+
+Not bad. And we even get some cute confidence intervals for the predicted mean. They get wider near the edges of the data, seemingly because there is less local information there. You can see that the width of this interval is symmetric about the center of the data.
+
+A good statistician will start with a simple model such as this. A wise statistician knows that the world is rarely this simple.
+
+My gut tells me to get rid of those spikes as they are confusing and difficult to reason with. We can extract the trend using a different type of model, one much more common in time series: a moving average!
+
+
+```{r}
+x %>%
+  mutate(
+    lag0 = temp,
+    lag1 = lag(temp),
+    lag2 = lag(temp, 2),
+    lead1 = lead(temp),
+    lead2 = lead(temp, 2)
+  ) %>%
+  na.omit() %>%
+  nest(matches("lag|lead")) %>%
+  transmute(temp, year, ma_5 = map_dbl(data, rowMeans)) %>%
+  group_by(year) %>%
+  gather("series", "value", -year) %>%
+  ggplot(aes(year, value, color = series)) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1996, 2025, 4))
+```
+
+Much more interesting. The moving average with a window of width 5 is an intuitive way to smooth a times series. As we know, time welcomes change... or differences... leading to sizable variance (spikes). The moving average takes data and filters out noise so that we can see what drives the overall trend.
+
+### Interpretations
+
+There are four interesting points I want to make here:
+
+1) There is a clear leap in the highs for May 17th starting from 2012 and peaking in 2016
+2) Temperatures appear rather stable from 1997 to 2012
+3) Temperatures seem to slope down after the 2016 peak
+4) Temperatures appear to reach a new, higher level post 2012, albeit less stable than before
+
+The apparent stability leading into such a great leap suggests that this is more than random. My personal comment is that this is due to the end of the Mayan calendar. Jokes aside, I do believe that this may have something to do with the explosion of social media and smartphones. Just about everyone had a smartphone and at least one social media account by 2016 in my memory. Smartphone apps can serve as marketplaces for industry. Manufacturers and consumers are closer than ever. More buying and selling, and making and wasting, with government regulation too slow to keep up with the new market, has a tendency to set the world on fire.
+
+The sharp decline we saw could be due to an intervention made once this heating trend was recognized. After all, much of this is in our control. What I find interesting is that the trend begins to increase again after the downwards slope, suggesting that the intervention was only a temporary fix. However, this final increase in the model is not unlike previous deviations seen in the trendline. The size of the deviation isn't very large.
+
+Overall, the post 2012 temperatures look rather unstable.
+
+### Model Considerations
+
+Averaging over time is a clean, simple way to extract the trend without introducing bias. It is very easy for human intervention and model tuning to "confirm" one's bias. Our choice of models (OLS and moving average) were chosen after looking at the data. However, it is fair to say that these are baseline models that would have been invoked regardless of any patterns witnessed in the raw data. Their results can safely be interpreted in accordance with traditional statistical inference. No p-hacking was performed here.
+
+I would like to mention another weakness of merely glancing at data like we've done today. We are very good at coming up with stories based on naive methodology such as plotting raw data and computing a few simple averages. It is possible the variance in the data is not systematic as I previously suggested, but simply due to random fluctuations typical of weather and temperature.
+
+Let's simulate some data to test this idea. I will set the seed to today's date. That way you know I didn't cherry pick this example. We will take the global average and standard deviation from the temperature data to simulate a random walk with gaussian innovations.
+
+```{r}
+
+set.seed(08182026)
+
+innovations <- rnorm(
+  n = length(1995:2025),
+  mean = 0,
+  sd = sd(x$temp)
+)
+
+temp <- mean(x$temp) + cumsum(innovations)
+
+(y <- tibble(year = 1995:2025, temp = temp))
+
+```
+
+We'll skip ahead and just plot the raw data and moving average like before:
+
+```{r}
+y %>%
+  mutate(
+    lag0 = temp,
+    lag1 = lag(temp),
+    lag2 = lag(temp, 2),
+    lead1 = lead(temp),
+    lead2 = lead(temp, 2)
+  ) %>%
+  na.omit() %>%
+  nest(matches("lag|lead")) %>%
+  transmute(temp, year, ma_5 = map_dbl(data, rowMeans)) %>%
+  group_by(year) %>%
+  gather("series", "value", -year) %>%
+  ggplot(aes(year, value, color = series)) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(1996, 2025, 4))
+```
+
+Now this is just one of infinitely many possible time series. If somebody told you this was a graph of the highs for May 17th over the past 30 years, they would think you are crazy. However, with enough rolling the dice, I'm sure a trend like the one we observed using the real data could easily pop up. That, or other equally compelling stories.
+
+This data tells a story of some sort of "bubble." It says that something began in 1996, that started to slow down about half way to 2024. In reality, this data was completely random!
+
+This is not to discredit the work of time series analysts worldwide. Rather, this example demonstrates the importance of providing stronger evidence before making a claim. For the temperature example, it is better to consider possible causes of change while accounting for confounders. Ideally, after doing so, the explained variation in your model nears 100%, or at least a reasonable amount. Without compelling evidence as evidenced by model diagnostics  (too many to list), any model should remain under scrutiny.
