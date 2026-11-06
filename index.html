@@ -4,8 +4,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Welcome</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+
+        main {
+            max-width: 750px;
+            margin: 80px auto;
+            padding: 30px;
+        }
+
+        header {
+            border-bottom: 1px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #ffffff;
+            font-size: 2.5rem;
+            margin: 0;
+        }
+
+        h2 {
+            color: #ffffff;
+            font-size: 1.3rem;
+            margin-top: 30px;
+        }
+
+        p {
+            color: #bdbdbd;
+        }
+
+        a {
+            color: #80cbc4;
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #b2dfdb;
+            text-decoration: underline;
+        }
+
+        .links ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .links li {
+            margin: 10px 0;
+        }
+    </style>
 </head>
+
 <body>
+    <main>
+        <header>
+            <h1>Welcome</h1>
+            <p>A little corner of the internet.</p>
+        </header>
+
+        <section class="bio">
+            <h2>About Me</h2>
+            <p>
+                Hi! I'm [Your Name]. Welcome to my website.
+                This is a short bio where you can write a little
+                about yourself, your interests, or your projects.
+            </p>
+        </section>
+
+        <section class="links">
+            <h2>Links</h2>
+            <ul>
+                <li><a href="/docs/page1.html">Page One</a></li>
+                <li><a href="/docs/page2.html">Page Two</a></li>
+            </ul>
+        </section>
+    </main>
 </body>
 </html>
